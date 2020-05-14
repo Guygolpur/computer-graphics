@@ -1,20 +1,13 @@
-import React from 'react';
+import React from 'react'
 import Draw from './Components/draw'
-import './App.css';
+import './App.css'
 
-function App() {
+function App () {
   return (
-    <div className="App">
-      <canvas></canvas>
-      <script>
-        let cx = document.querySelector("canvas").getContext("2d");
-        cx.strokeStyle = "blue";
-        cx.strokeRect(5, 5, 50, 50);
-        cx.lineWidth = 5;
-        cx.strokeRect(135, 5, 50, 50);
-      </script>
+    <div className='App'>
+      <Draw />
     </div>
-  );
+  )
 }
 
-export default App;
+export default App
