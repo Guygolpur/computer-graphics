@@ -12,6 +12,8 @@ class Draw extends Component {
     document.addEventListener('mousemove', e => {
       this.setState({ left: e.pageX, top: e.pageY })
     })
+    this.drawBoat()
+    console.log(this.state.left)
   }
   bezier = (cp1x, cp1y, cp2x, cp2y, x, y) => {
     let cx = document.querySelector('canvas').getContext('2d')
@@ -54,7 +56,8 @@ class Draw extends Component {
     this.drawCircle(450, 490, 20, 0, 7)
   }
   render () {
-      console.log(this.state.left)
+    console.log(this.state.left)
+
     return (
       <div>
         <h1 onClick={() => this.drawBoat()}>draw</h1>
