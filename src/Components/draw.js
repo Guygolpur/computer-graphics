@@ -26,26 +26,21 @@ class Draw extends Component {
   componentDidMount() {
     // this.draw();
     document.addEventListener("mousemove", (e) => {
-      this.setState({ mouseX: e.offsetX , mouseT: e.offsetY }, () => {
-        console.log(this.state.left)
-        console.log(this.state.top)
+      this.setState({ mouseX: e.offsetX , mouseY: e.offsetY }, () => {
+        console.log(this.state.mouseX)
+        console.log(this.state.mouseT)
         if (
-          // this.state.left > 0 &&
-          // this.state.left < 300 &&
-          // this.state.top > 0 &&
-          // this.state.top < 300 &&
           this.state.operation === "move"
         ) {
           let {points} = this.state
-          // this.cleanScreen()
           points.map((point, index) => {
-            console.log(point)
             let x = this.state.mouseX - this.state.prevmouseX
             let y = this.state.mouseY - this.state.prevmouseY
+            console.log(x)
+            console.log(y)
             points[index] = this.translatePoint(point, x, y)
           })
           this.setState({points: points})
-          // this.draw();
 
         }
         if (this.state.operation === "rotate") {
@@ -268,21 +263,21 @@ class Draw extends Component {
     cx.clearRect(0, 0, canvasWidth, canvasHeight);
   }
   drawCurve(p1, p2, p3, p4, n) {
-    var ax = -1 * p1.x + 3 * p2.x - 3 * p3.x + p4.x;
-    var bx = 3 * p1.x - 6 * p2.x + 3 * p3.x;
-    var cx = -3 * p1.x + 3 * p2.x;
-    var dx = p1.x;
-    var ay = -1 * p1.y + 3 * p2.y - 3 * p3.y + p4.y;
-    var by = 3 * p1.y - 6 * p2.y + 3 * p3.y;
-    var cy = -3 * p1.y + 3 * p2.y;
-    var dy = p1.y;
+    let ax = -1 * p1.x + 3 * p2.x - 3 * p3.x + p4.x;
+    let bx = 3 * p1.x - 6 * p2.x + 3 * p3.x;
+    let cx = -3 * p1.x + 3 * p2.x;
+    let dx = p1.x;
+    let ay = -1 * p1.y + 3 * p2.y - 3 * p3.y + p4.y;
+    let by = 3 * p1.y - 6 * p2.y + 3 * p3.y;
+    let cy = -3 * p1.y + 3 * p2.y;
+    let dy = p1.y;
 
-    var delta = 1 / n;
-    var currX, currY;
-    var prevX = p1.x;
-    var prevY = p1.y;
+    let delta = 1 / n;
+    let currX, currY;
+    let prevX = p1.x;
+    let prevY = p1.y;
 
-    for (var t = 0; t <= 1; t += delta) {
+    for (let t = 0; t <= 1; t += delta) {
       currX = ax * t * t * t + bx * t * t + cx * t + dx;
       currY = ay * t * t * t + by * t * t + cy * t + dy;
       this.drawDiagonal(currX, currY, prevX, prevY);
@@ -291,11 +286,11 @@ class Draw extends Component {
     }
   }
   drawLine(_x1, _y1, _x2, _y2) {
-    var step = Math.abs(_y2 - _y1) > Math.abs(_x2 - _x1);
-    var x1 = _x1;
-    var y1 = _y1;
-    var x2 = _x2;
-    var y2 = _y2;
+    let step = Math.abs(_y2 - _y1) > Math.abs(_x2 - _x1);
+    let x1 = _x1;
+    let y1 = _y1;
+    let x2 = _x2;
+    let y2 = _y2;
 
     if (step) {
       x1 = _y1;
@@ -305,25 +300,25 @@ class Draw extends Component {
     }
 
     if (x1 > x2) {
-      var tx = x1;
-      var ty = y1;
+      let tx = x1;
+      let ty = y1;
       x1 = x2;
       y1 = y2;
       x2 = tx;
       y2 = ty;
     }
 
-    var dX = x2 - x1;
-    var dY = Math.abs(y2 - y1);
-    var err = 0.0;
-    var dErr = dY / dX;
-    var yStep = 1;
+    let dX = x2 - x1;
+    let dY = Math.abs(y2 - y1);
+    let err = 0.0;
+    let dErr = dY / dX;
+    let yStep = 1;
 
     if (y1 > y2) yStep = -1;
 
-    var yp = y1;
+    let yp = y1;
 
-    for (var xp = x1; xp <= x2; xp++) {
+    for (let xp = x1; xp <= x2; xp++) {
       if (step) this.drawPixel(yp, xp);
       else this.drawPixel(xp, yp);
 
