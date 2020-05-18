@@ -15,50 +15,171 @@ class Draw extends Component {
       Ymax: 0,
       Xmax: 0,
       Xmin: 0,
-      prevmouseX:0,
-      prevmouseY:0
+      mouseX: 0,
+      mouseY: 0,
+      prevmouseX: 1,
+      prevmouseY: 1,
+      pointsProportion: { x: 0, y: 0 },
     };
     this.handleMoveOperation = this.handleMoveOperation.bind(this);
     this.handleRotateOperation = this.handleRotateOperation.bind(this);
-    // this.pointCalcRotateX = this.pointCalcRotateX.bind(this);
-    // this.pointCalcRotateY = this.pointCalcRotateY.bind(this);
+    this.handleMirrorUpDownOperation = this.handleMirrorUpDownOperation.bind(this)
+    this.handleMirrorLeftRightOperation = this.handleMirrorLeftRightOperation.bind(this)
+    this.handleScallingOperation = this.handleScallingOperation.bind(this)
+  }
+  rotate(p, a) {
+    let mtrx = [
+      [Math.cos(a), Math.sin(a), 0],
+      [-Math.sin(a), Math.cos(a), 0],
+      [0, 0, 1],
+    ];
+    return this.matrixMult(p, mtrx);
+  }
+  rotateCenter(p, c, a) {
+    let t;
+    if (p.z === 1) {
+      t = this.translatePoint(p, -c.x, -c.y);
+      t = this.rotate(t, a);
+      return this.translatePoint(t, c.x, c.y);
+    }
+    return p;
   }
   componentDidMount() {
     // this.draw();
     document.addEventListener("mousemove", (e) => {
-      this.setState({ mouseX: e.offsetX , mouseY: e.offsetY }, () => {
-        console.log(this.state.mouseX)
-        console.log(this.state.mouseT)
-        if (
-          this.state.operation === "move"
-        ) {
-          let {points} = this.state
+      this.setState({ mouseX: e.offsetX, mouseY: e.offsetY }, () => {
+        if (this.state.operation === "move") {
+          let { points } = this.state;
           points.map((point, index) => {
-            let x = this.state.mouseX - this.state.prevmouseX
-            let y = this.state.mouseY - this.state.prevmouseY
-            console.log(x)
-            console.log(y)
-            points[index] = this.translatePoint(point, x, y)
-          })
-          this.setState({points: points})
-
+            let x = this.state.mouseX - this.state.prevmouseX;
+            let y = this.state.mouseY - this.state.prevmouseY;
+            points[index] = this.translatePoint(point, x, y);
+          });
+          this.setState({ points: points });
         }
         if (this.state.operation === "rotate") {
-          let xy
-          let {prevmouseX, mouseX, prevmouseY, mouseY} = this.state
-          if(this.state.prevmouseX -  this.state.mouseX < 0){
+          let xy = 1;
+          let { prevmouseX, mouseX, prevmouseY, mouseY, points } = this.state;
+          if (prevmouseX - mouseX < 0) {
             xy = Math.atan((prevmouseY - mouseY) / (prevmouseX - mouseX));
+          } else if (prevmouseX - mouseX > 0) {
+            xy =
+              Math.PI +
+              Math.atan((prevmouseY - mouseY) / (prevmouseX - mouseX));
           }
-          else {
+          console.log(xy);
+          points.map((point, index) => {
+            points[index] = this.rotateCenter(
+              point,
+              this.state.pointsProportion,
+              xy
+            );
+          });
 
-          }
+          this.setState({ points: points });
         }
-        this.setState({ prevmouseX: this.state.mouseX , prevmouseY: this.state.mouseY })
-        this.draw()
+        if (this.state.operation === "scalling") {
+          let { points } = this.state;
+          console.log("scalling");
+          let lastX = Math.abs(
+            (this.state.prevmouseX - this.state.mouseX) /
+              (this.state.Xmax - this.state.Xmin) -
+              1
+          );
+          let lastY = Math.abs(
+            1 +
+              (this.state.prevmouseY - this.state.mouseY) /
+                (this.state.Ymax - this.state.Ymin)
+          );
+          this.state.points.map((point, index) => {
+            points[index] = this.scaleCenter(
+              point,
+              this.state.pointsProportion,
+              lastX,
+              lastY
+            );
+          });
+        }
+        this.setState({
+          prevmouseX: this.state.mouseX,
+          prevmouseY: this.state.mouseY,
+        });
+        this.draw();
       });
     });
   }
-    
+  scale(p, sX, sY) {
+    let mtrx = [
+      [sX, 0, 0],
+      [0, sY, 0],
+      [0, 0, 1],
+    ];
+    return this.matrixMult(p, mtrx);
+  }
+
+  scaleCenter(p, c, sX, sY) {
+    if (p.z === 1) {
+      let mtrx = [
+        [sX, 0, 0],
+        [0, sY, 0],
+        [c.x * (1 - sX), c.y * (1 - sY), 1],
+      ];
+      return this.matrixMult(p, mtrx);
+    } else {
+      let t = { x: p.x * Math.min(sX, sY), y: p.y, z: p.z };
+      return t;
+    }
+  }
+
+  xMirror() {
+    //Guy
+    this.state.points.map((obj, index) => {
+      this.state.points[index] = this.reflectionX(
+        this.state.points[index],
+        this.state.pointsProportion
+      );
+    });
+    let lastAction = 10;
+    this.findPointsProprtion();
+    this.draw();
+  }
+
+  // Guy
+  yMirror() {
+    let { points } = this.state;
+    points.map((point, index) => {
+      points[index] = this.reflectionY(point, this.state.pointsProportion);
+    });
+    this.findPointsProprtion();
+    this.draw();
+  }
+
+  reflectionX(p, c) {
+    //Guy
+    let t = this.translatePoint(p, -c.x, -c.y);
+    let mtrx = [
+      [1, 0, 0],
+      [0, -1, 0],
+      [0, 0, 1],
+    ];
+    t = this.matrixMult(t, mtrx);
+    return this.translatePoint(t, c.x, c.y);
+  }
+
+  // Guy
+  reflectionY(p, c) {
+    if (p.z == 1) {
+      let t = this.translatePoint(p, -c.x, -c.y);
+      let mtrx = [
+        [-1, 0, 0],
+        [0, 1, 0],
+        [0, 0, 1],
+      ];
+      t = this.matrixMult(t, mtrx);
+      return this.translatePoint(t, c.x, c.y);
+    }
+    return p;
+  }
   drawDiagonal(x1, y1, x2, y2) {
     let cx = document.querySelector("canvas").getContext("2d");
     cx.beginPath();
@@ -124,7 +245,6 @@ class Draw extends Component {
     // this.drawDiagonal(0 + left, 450 + top, 50 + left, 530 + top);
     // this.drawDiagonal(50 + left, 530 + top, 600 + left, 530 + top);
     // this.drawDiagonal(600 + left, 530 + top, 700 + left, 450 + top);
-
     // this.drawCircle(600 + left, 490 + top, 20, 0, 7);
     // this.drawCircle(550 + left, 490 + top, 20, 0, 7);
     // this.drawCircle(500 + left, 490 + top, 20, 0, 7);
@@ -388,6 +508,17 @@ class Draw extends Component {
   handleRotateOperation() {
     this.setState({ operation: "rotate" });
   }
+  handleMirrorUpDownOperation() {
+    this.setState({ operation: "mirror" });
+    this.xMirror();
+  }
+  handleMirrorLeftRightOperation() {
+    this.setState({ operation: "mirror" });
+    this.yMirror();
+  }
+  handleScallingOperation() {
+    this.setState({ operation: "scalling" });
+  }
   //adjust all the points
   findPointsProprtion() {
     let { points } = this.state;
@@ -551,6 +682,27 @@ class Draw extends Component {
             onClick={this.handleRotateOperation}
           >
             Rotate
+          </Button>
+          <Button
+            variant="contained"
+            color="primary"
+            onClick={this.handleMirrorLeftRightOperation}
+          >
+            Mirror left/right
+          </Button>
+          <Button
+            variant="contained"
+            color="primary"
+            onClick={this.handleMirrorUpDownOperation}
+          >
+            Mirror up/dows
+          </Button>
+          <Button
+            variant="contained"
+            color="primary"
+            onClick={this.handleScallingOperation}
+          >
+            Scalling
           </Button>
           <Button
             variant="contained"
