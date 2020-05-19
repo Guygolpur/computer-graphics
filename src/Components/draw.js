@@ -1,3 +1,4 @@
+//Bar Azouri and Guy Golpur
 import React, { Component } from "react";
 import Button from "@material-ui/core/Button";
 const canvasWidth = 1000;

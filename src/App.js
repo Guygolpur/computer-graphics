@@ -1,3 +1,4 @@
+//Bar Azouri and Guy Golpur
 import React from 'react'
 import Draw from './Components/draw'
 import './App.css'
