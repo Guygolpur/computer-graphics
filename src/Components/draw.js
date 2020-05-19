@@ -6,13 +6,31 @@ class Draw extends Component {
   constructor(props) {
     super(props);
     this.state = {
-      left: 0, top: 0, operation: "", drawBoat: [], points: [], Ymin: 0, Ymax: 0, Xmax: 0, Xmin: 0, mouseX: 0, mouseY: 0, prevmouseX: 1, prevmouseY: 1, pointsProportion: { x: 0, y: 0 },
+      left: 0,
+      top: 0,
+      operation: "",
+      drawBoat: [],
+      points: [],
+      Ymin: 0,
+      Ymax: 0,
+      Xmax: 0,
+      Xmin: 0,
+      mouseX: 0,
+      mouseY: 0,
+      prevmouseX: 1,
+      prevmouseY: 1,
+      pointsProportion: { x: 0, y: 0 },
     };
     this.setOperationMoveState = this.setOperationMoveState.bind(this);
     this.setOperationRotateState = this.setOperationRotateState.bind(this);
-    this.setOperationMirrorUpDownState = this.setOperationMirrorUpDownState.bind(this)
-    this.setOperationMirrorLeftRightState = this.setOperationMirrorLeftRightState.bind(this)
-    this.setOperationScallingState = this.setOperationScallingState.bind(this)
+    this.setOperationMirrorUpDownState = this.setOperationMirrorUpDownState.bind(
+      this
+    );
+    this.setOperationMirrorLeftRightState = this.setOperationMirrorLeftRightState.bind(
+      this
+    );
+    this.setOperationScallingState = this.setOperationScallingState.bind(this);
+    this.handleClear = this.handleClear.bind(this);
   }
 
   rotate(first, degree) {
@@ -72,13 +90,13 @@ class Draw extends Component {
           console.log("scalling");
           let lastX = Math.abs(
             (this.state.prevmouseX - this.state.mouseX) /
-            (this.state.Xmax - this.state.Xmin) -
-            1
+              (this.state.Xmax - this.state.Xmin) -
+              1
           );
           let lastY = Math.abs(
             1 +
-            (this.state.prevmouseY - this.state.mouseY) /
-            (this.state.Ymax - this.state.Ymin)
+              (this.state.prevmouseY - this.state.mouseY) /
+                (this.state.Ymax - this.state.Ymin)
           );
           this.state.points.map((point, index) => {
             points[index] = this.scaling(
@@ -93,7 +111,7 @@ class Draw extends Component {
           prevmouseX: this.state.mouseX,
           prevmouseY: this.state.mouseY,
         });
-        this.draw();
+        if (this.state.operation !== "clear") this.draw();
       });
     });
   }
@@ -153,7 +171,11 @@ class Draw extends Component {
 
   reflectionUpDown(first, center) {
     if (first.z === 1) {
-      let afterTranslatePoint = this.translatePoint(first, -center.x, -center.y);
+      let afterTranslatePoint = this.translatePoint(
+        first,
+        -center.x,
+        -center.y
+      );
       let metrix = [
         [-1, 0, 0],
         [0, 1, 0],
@@ -334,7 +356,10 @@ class Draw extends Component {
   setOperationScallingState() {
     this.setState({ operation: "scalling" });
   }
-
+  handleClear() {
+    this.setState({ operation: "clear" });
+    this.cleanScreen();
+  }
   findPointsProprtion() {
     let { points } = this.state;
     if (points.length > 0) {
@@ -361,9 +386,18 @@ class Draw extends Component {
 
   multipleMatrix(axisymmetric, metrix) {
     let result = { x: 0, y: 0, z: 0 };
-    result.x = axisymmetric.x * metrix[0][0] + axisymmetric.y * metrix[1][0] + axisymmetric.z * metrix[2][0];
-    result.y = axisymmetric.x * metrix[0][1] + axisymmetric.y * metrix[1][1] + axisymmetric.z * metrix[2][1];
-    result.z = axisymmetric.x * metrix[0][2] + axisymmetric.y * metrix[1][2] + axisymmetric.z * metrix[2][2];
+    result.x =
+      axisymmetric.x * metrix[0][0] +
+      axisymmetric.y * metrix[1][0] +
+      axisymmetric.z * metrix[2][0];
+    result.y =
+      axisymmetric.x * metrix[0][1] +
+      axisymmetric.y * metrix[1][1] +
+      axisymmetric.z * metrix[2][1];
+    result.z =
+      axisymmetric.x * metrix[0][2] +
+      axisymmetric.y * metrix[1][2] +
+      axisymmetric.z * metrix[2][2];
     return result;
   }
 
@@ -452,6 +486,7 @@ class Draw extends Component {
     };
     reader.readAsText(e.target.files[0]);
   };
+
   render() {
     return (
       <div>
@@ -499,7 +534,7 @@ class Draw extends Component {
           <Button
             variant="contained"
             color="primary"
-            onClick={this.cleanScreen}
+            onClick={this.handleClear}
           >
             clear
           </Button>
