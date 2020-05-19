@@ -6,54 +6,164 @@ class Draw extends Component {
   constructor(props) {
     super(props);
     this.state = {
-      left: 0,
-      top: 0,
-      operation: "",
-      drawData: [],
-      points: [],
-      Ymin: 0,
-      Ymax: 0,
-      Xmax: 0,
-      Xmin: 0,
-      prevmouseX:0,
-      prevmouseY:0
+      left: 0, top: 0, operation: "", drawBoat: [], points: [], Ymin: 0, Ymax: 0, Xmax: 0, Xmin: 0, mouseX: 0, mouseY: 0, prevmouseX: 1, prevmouseY: 1, pointsProportion: { x: 0, y: 0 },
     };
-    this.handleMoveOperation = this.handleMoveOperation.bind(this);
-    this.handleRotateOperation = this.handleRotateOperation.bind(this);
-    // this.pointCalcRotateX = this.pointCalcRotateX.bind(this);
-    // this.pointCalcRotateY = this.pointCalcRotateY.bind(this);
+    this.setOperationMoveState = this.setOperationMoveState.bind(this);
+    this.setOperationRotateState = this.setOperationRotateState.bind(this);
+    this.setOperationMirrorUpDownState = this.setOperationMirrorUpDownState.bind(this)
+    this.setOperationMirrorLeftRightState = this.setOperationMirrorLeftRightState.bind(this)
+    this.setOperationScallingState = this.setOperationScallingState.bind(this)
   }
-  componentDidMount() {
-    // this.draw();
-    document.addEventListener("mousemove", (e) => {
-      this.setState({ mouseX: e.offsetX , mouseY: e.offsetY }, () => {
-        console.log(this.state.mouseX)
-        console.log(this.state.mouseT)
-        if (
-          this.state.operation === "move"
-        ) {
-          let {points} = this.state
-          points.map((point, index) => {
-            let x = this.state.mouseX - this.state.prevmouseX
-            let y = this.state.mouseY - this.state.prevmouseY
-            console.log(x)
-            console.log(y)
-            points[index] = this.translatePoint(point, x, y)
-          })
-          this.setState({points: points})
 
+  rotate(first, degree) {
+    let metrix = [
+      [Math.cos(degree), Math.sin(degree), 0],
+      [-Math.sin(degree), Math.cos(degree), 0],
+      [0, 0, 1],
+    ];
+    return this.multipleMatrix(first, metrix);
+  }
+
+  translateRotate(first, center, degree) {
+    let afterTranslatePoint;
+    if (first.z === 1) {
+      afterTranslatePoint = this.translatePoint(first, -center.x, -center.y);
+      afterTranslatePoint = this.rotate(afterTranslatePoint, degree);
+      return this.translatePoint(afterTranslatePoint, center.x, center.y);
+    }
+    return first;
+  }
+
+  componentDidMount() {
+    document.addEventListener("mousemove", (e) => {
+      this.setState({ mouseX: e.offsetX, mouseY: e.offsetY }, () => {
+        if (this.state.operation === "move") {
+          let { points } = this.state;
+          points.map((point, index) => {
+            let x = this.state.mouseX - this.state.prevmouseX;
+            let y = this.state.mouseY - this.state.prevmouseY;
+            points[index] = this.translatePoint(point, x, y);
+          });
+          this.setState({ points: points });
         }
         if (this.state.operation === "rotate") {
-          let cx = document.querySelector("canvas").getContext("2d");
-          cx.clearRect(0, 0, canvasWidth, canvasHeight);
-          this.drawWithRotate();
+          let xy = 1;
+          let { prevmouseX, mouseX, prevmouseY, mouseY, points } = this.state;
+          if (prevmouseX - mouseX < 0) {
+            xy = Math.atan((prevmouseY - mouseY) / (prevmouseX - mouseX));
+          } else if (prevmouseX - mouseX > 0) {
+            xy =
+              Math.PI +
+              Math.atan((prevmouseY - mouseY) / (prevmouseX - mouseX));
+          }
+          console.log(xy);
+          points.map((point, index) => {
+            points[index] = this.translateRotate(
+              point,
+              this.state.pointsProportion,
+              xy
+            );
+          });
+
+          this.setState({ points: points });
         }
-        this.setState({ prevmouseX: this.state.mouseX , prevmouseY: this.state.mouseY })
-        this.draw()
+        if (this.state.operation === "scalling") {
+          let { points } = this.state;
+          console.log("scalling");
+          let lastX = Math.abs(
+            (this.state.prevmouseX - this.state.mouseX) /
+            (this.state.Xmax - this.state.Xmin) -
+            1
+          );
+          let lastY = Math.abs(
+            1 +
+            (this.state.prevmouseY - this.state.mouseY) /
+            (this.state.Ymax - this.state.Ymin)
+          );
+          this.state.points.map((point, index) => {
+            points[index] = this.scaling(
+              point,
+              this.state.pointsProportion,
+              lastX,
+              lastY
+            );
+          });
+        }
+        this.setState({
+          prevmouseX: this.state.mouseX,
+          prevmouseY: this.state.mouseY,
+        });
+        this.draw();
       });
     });
   }
-    
+
+  scale(first, sX, sY) {
+    let metrix = [
+      [sX, 0, 0],
+      [0, sY, 0],
+      [0, 0, 1],
+    ];
+    return this.multipleMatrix(first, metrix);
+  }
+
+  scaling(first, center, sX, sY) {
+    if (first.z === 1) {
+      let metrix = [
+        [sX, 0, 0],
+        [0, sY, 0],
+        [center.x * (1 - sX), center.y * (1 - sY), 1],
+      ];
+      return this.multipleMatrix(first, metrix);
+    } else {
+      return { x: first.x * Math.min(sX, sY), y: first.y, z: first.z };
+    }
+  }
+
+  MirrorLeftRight() {
+    this.state.points.map((obj, index) => {
+      this.state.points[index] = this.reflectionLeftRight(
+        this.state.points[index],
+        this.state.pointsProportion
+      );
+    });
+    this.findPointsProprtion();
+    this.draw();
+  }
+
+  MirrorUpDown() {
+    let { points } = this.state;
+    points.map((point, index) => {
+      points[index] = this.reflectionUpDown(point, this.state.pointsProportion);
+    });
+    this.findPointsProprtion();
+    this.draw();
+  }
+
+  reflectionLeftRight(first, center) {
+    let afterTranslatePoint = this.translatePoint(first, -center.x, -center.y);
+    let metrix = [
+      [1, 0, 0],
+      [0, -1, 0],
+      [0, 0, 1],
+    ];
+    afterTranslatePoint = this.multipleMatrix(afterTranslatePoint, metrix);
+    return this.translatePoint(afterTranslatePoint, center.x, center.y);
+  }
+
+  reflectionUpDown(first, center) {
+    if (first.z === 1) {
+      let afterTranslatePoint = this.translatePoint(first, -center.x, -center.y);
+      let metrix = [
+        [-1, 0, 0],
+        [0, 1, 0],
+        [0, 0, 1],
+      ];
+      afterTranslatePoint = this.multipleMatrix(afterTranslatePoint, metrix);
+      return this.translatePoint(afterTranslatePoint, center.x, center.y);
+    }
+    return first;
+  }
   drawDiagonal(x1, y1, x2, y2) {
     let cx = document.querySelector("canvas").getContext("2d");
     cx.beginPath();
@@ -61,21 +171,23 @@ class Draw extends Component {
     cx.lineTo(x2, y2);
     cx.stroke();
   }
-  drawPixel(x, y) {
+
+  drawSinglePixel(x, y) {
     let cx = document.querySelector("canvas").getContext("2d");
     cx.fillStyle = "black";
     cx.fillRect(x, y, 1, 1);
   }
+
   circleAssist(cx, cy, x, y) {
-    const { drawPixel } = this;
-    drawPixel(cx + x, cy + y);
-    drawPixel(cx - x, cy + y);
-    drawPixel(cx + x, cy - y);
-    drawPixel(cx - x, cy - y);
-    drawPixel(cx + y, cy + x);
-    drawPixel(cx - y, cy + x);
-    drawPixel(cx + y, cy - x);
-    drawPixel(cx - y, cy - x);
+    const { drawSinglePixel } = this;
+    drawSinglePixel(cx + x, cy + y);
+    drawSinglePixel(cx - x, cy + y);
+    drawSinglePixel(cx + x, cy - y);
+    drawSinglePixel(cx - x, cy - y);
+    drawSinglePixel(cx + y, cy + x);
+    drawSinglePixel(cx - y, cy + x);
+    drawSinglePixel(cx + y, cy - x);
+    drawSinglePixel(cx - y, cy - x);
   }
   drawCircle(cx, cy, r) {
     let x = 0.0;
@@ -97,171 +209,11 @@ class Draw extends Component {
     if (x === y) this.circleAssist(cx, cy, x, y);
   }
 
-  drawWithMove() {
-    // const { left, top } = this.state;
-    // this.bezier(
-    //   200 + left,
-    //   10 + top,
-    //   1000 + left,
-    //   400 + top,
-    //   200 + left,
-    //   400 + top
-    // );
-    // this.drawDiagonal(200 + left, 10 + top, 200 + left, 450 + top);
-    // this.drawDiagonal(200 + left, 10 + top, 0 + left, 380 + top);
-    // this.drawDiagonal(0 + left, 380 + top, 200 + left, 380 + top);
-    // this.drawDiagonal(0 + left, 450 + top, 700 + left, 450 + top);
-    // this.drawDiagonal(0 + left, 450 + top, 50 + left, 530 + top);
-    // this.drawDiagonal(50 + left, 450 + top, 100 + left, 530 + top);
-    // this.drawDiagonal(100 + left, 450 + top, 150 + left, 530 + top);
-    // this.drawDiagonal(150 + left, 450 + top, 200 + left, 530 + top);
-    // this.drawDiagonal(200 + left, 450 + top, 250 + left, 530 + top);
-    // this.drawDiagonal(0 + left, 450 + top, 50 + left, 530 + top);
-    // this.drawDiagonal(50 + left, 530 + top, 600 + left, 530 + top);
-    // this.drawDiagonal(600 + left, 530 + top, 700 + left, 450 + top);
-
-    // this.drawCircle(600 + left, 490 + top, 20, 0, 7);
-    // this.drawCircle(550 + left, 490 + top, 20, 0, 7);
-    // this.drawCircle(500 + left, 490 + top, 20, 0, 7);
-    // this.drawCircle(450 + left, 490 + top, 20, 0, 7);
-  }
-  // pointCalcRotateX(x, y) {
-  //   const { top } = this.state;
-  //   let M_PI = 3.14159265358979323846264338327950288;
-  //   let c = Math.cos(((top % 360) * M_PI) / 180);
-  //   let s = Math.sin(((top % 360) * M_PI) / 180);
-  //   return x * c - y * s + 200;
-  // }
-
-  // pointCalcRotateY(x, y) {
-  //   const { top } = this.state;
-  //   let M_PI = 3.14159265358979323846264338327950288;
-  //   let c = Math.cos(((top % 360) * M_PI) / 180);
-  //   let s = Math.sin(((top % 360) * M_PI) / 180);
-  //   return x * s + y * c + 200;
-  // }
-  // drawWithRotate() {
-  //   const { pointCalcRotateX, pointCalcRotateY } = this;
-  //   this.bezier(
-  //     pointCalcRotateX(200, 10),
-  //     pointCalcRotateY(200, 10),
-  //     pointCalcRotateX(1000, 400),
-  //     pointCalcRotateY(1000, 400),
-  //     pointCalcRotateX(200, 400),
-  //     pointCalcRotateY(200, 400)
-  //   );
-
-  //   this.drawDiagonal(
-  //     pointCalcRotateX(200, 10),
-  //     pointCalcRotateY(200, 10),
-  //     pointCalcRotateX(200, 450),
-  //     pointCalcRotateY(200, 450)
-  //   );
-  //   this.drawDiagonal(
-  //     pointCalcRotateX(200, 10),
-  //     pointCalcRotateY(200, 10),
-  //     pointCalcRotateX(0, 380),
-  //     pointCalcRotateY(0, 380)
-  //   );
-  //   this.drawDiagonal(
-  //     pointCalcRotateX(0, 380),
-  //     pointCalcRotateY(0, 380),
-  //     pointCalcRotateX(200, 380),
-  //     pointCalcRotateY(200, 380)
-  //   );
-  //   this.drawDiagonal(
-  //     pointCalcRotateX(0, 450),
-  //     pointCalcRotateY(0, 450),
-  //     pointCalcRotateX(700, 450),
-  //     pointCalcRotateY(700, 450)
-  //   );
-
-  //   this.drawDiagonal(
-  //     pointCalcRotateX(0, 450),
-  //     pointCalcRotateY(0, 450),
-  //     pointCalcRotateX(50, 530),
-  //     pointCalcRotateY(50, 530)
-  //   );
-  //   this.drawDiagonal(
-  //     pointCalcRotateX(50, 450),
-  //     pointCalcRotateY(50, 450),
-  //     pointCalcRotateX(100, 530),
-  //     pointCalcRotateY(100, 530)
-  //   );
-
-  //   this.drawDiagonal(
-  //     pointCalcRotateX(100, 450),
-  //     pointCalcRotateY(100, 450),
-  //     pointCalcRotateX(150, 530),
-  //     pointCalcRotateY(150, 530)
-  //   );
-  //   this.drawDiagonal(
-  //     pointCalcRotateX(150, 450),
-  //     pointCalcRotateY(150, 450),
-  //     pointCalcRotateX(200, 530),
-  //     pointCalcRotateY(200, 530)
-  //   );
-
-  //   this.drawDiagonal(
-  //     pointCalcRotateX(200, 450),
-  //     pointCalcRotateY(200, 450),
-  //     pointCalcRotateX(250, 530),
-  //     pointCalcRotateY(250, 530)
-  //   );
-  //   this.drawDiagonal(
-  //     pointCalcRotateX(0, 450),
-  //     pointCalcRotateY(0, 450),
-  //     pointCalcRotateX(50, 530),
-  //     pointCalcRotateY(50, 530)
-  //   );
-
-  //   this.drawDiagonal(
-  //     pointCalcRotateX(50, 530),
-  //     pointCalcRotateY(50, 530),
-  //     pointCalcRotateX(600, 530),
-  //     pointCalcRotateY(600, 530)
-  //   );
-  //   this.drawDiagonal(
-  //     pointCalcRotateX(600, 530),
-  //     pointCalcRotateY(600, 530),
-  //     pointCalcRotateX(700, 450),
-  //     pointCalcRotateY(700, 450)
-  //   );
-
-  //   this.drawCircle(
-  //     pointCalcRotateX(600, 490),
-  //     pointCalcRotateY(600, 490),
-  //     20,
-  //     0,
-  //     7
-  //   );
-  //   this.drawCircle(
-  //     pointCalcRotateX(500, 490),
-  //     pointCalcRotateY(500, 490),
-  //     20,
-  //     0,
-  //     7
-  //   );
-  //   this.drawCircle(
-  //     pointCalcRotateX(550, 490),
-  //     pointCalcRotateY(550, 490),
-  //     20,
-  //     0,
-  //     7
-  //   );
-
-  //   this.drawCircle(
-  //     pointCalcRotateX(450, 490),
-  //     pointCalcRotateY(450, 490),
-  //     20,
-  //     0,
-  //     7
-  //   );
-  // }
   cleanScreen() {
     let cx = document.querySelector("canvas").getContext("2d");
     cx.clearRect(0, 0, canvasWidth, canvasHeight);
   }
+
   drawCurve(p1, p2, p3, p4, n) {
     let ax = -1 * p1.x + 3 * p2.x - 3 * p3.x + p4.x;
     let bx = 3 * p1.x - 6 * p2.x + 3 * p3.x;
@@ -319,8 +271,8 @@ class Draw extends Component {
     let yp = y1;
 
     for (let xp = x1; xp <= x2; xp++) {
-      if (step) this.drawPixel(yp, xp);
-      else this.drawPixel(xp, yp);
+      if (step) this.drawSinglePixel(yp, xp);
+      else this.drawSinglePixel(xp, yp);
 
       err = err + dErr;
 
@@ -330,11 +282,12 @@ class Draw extends Component {
       }
     }
   }
+
   draw() {
     this.cleanScreen();
-    const { drawData, points } = this.state;
+    const { drawBoat, points } = this.state;
 
-    drawData.map((data, index) => {
+    drawBoat.map((data, index) => {
       if (data[0] === 1) {
         this.drawLine(
           points[data[1]].x,
@@ -358,32 +311,30 @@ class Draw extends Component {
         );
       }
     });
-    // this.bezier(200, 10, 1000, 400, 200, 400);
-    // this.drawDiagonal(200, 10, 200, 450);
-    // this.drawDiagonal(200, 10, 0, 380);
-    // this.drawDiagonal(0, 380, 200, 380);
-    // this.drawDiagonal(0, 450, 700, 450);
-    // this.drawDiagonal(0, 450, 50, 530);
-    // this.drawDiagonal(50, 450, 100, 530);
-    // this.drawDiagonal(100, 450, 150, 530);
-    // this.drawDiagonal(150, 450, 200, 530);
-    // this.drawDiagonal(200, 450, 250, 530);
-    // this.drawDiagonal(0, 450, 50, 530);
-    // this.drawDiagonal(50, 530, 600, 530);
-    // this.drawDiagonal(600, 530, 700, 450);
-
-    // this.drawCircle(600, 490, 20, 0, 7);
-    // this.drawCircle(550, 490, 20, 0, 7);
-    // this.drawCircle(500, 490, 20, 0, 7);
-    // this.drawCircle(450, 490, 20, 0, 7);
   }
-  handleMoveOperation() {
+
+  setOperationMoveState() {
     this.setState({ operation: "move" });
   }
-  handleRotateOperation() {
+
+  setOperationRotateState() {
     this.setState({ operation: "rotate" });
   }
-  //adjust all the points
+
+  setOperationMirrorUpDownState() {
+    this.setState({ operation: "mirror" });
+    this.MirrorLeftRight();
+  }
+
+  setOperationMirrorLeftRightState() {
+    this.setState({ operation: "mirror" });
+    this.MirrorUpDown();
+  }
+
+  setOperationScallingState() {
+    this.setState({ operation: "scalling" });
+  }
+
   findPointsProprtion() {
     let { points } = this.state;
     if (points.length > 0) {
@@ -392,7 +343,6 @@ class Draw extends Component {
       Xmax = Xmin = points[0].x;
       points.map((point, index) => {
         if (index > 0 && point.z === 1) {
-          //this is a point
           if (point.x < Xmin) Xmin = point.x;
           if (point.y < Ymin) Ymin = point.y;
           if (point.x > Xmax) Xmax = point.x;
@@ -408,35 +358,22 @@ class Draw extends Component {
       });
     }
   }
-  matrixMult(axis, mtrx) {
-    //####### need to change
-    let rslt = { x: 0, y: 0, z: 0 };
-    rslt.x = axis.x * mtrx[0][0] + axis.y * mtrx[1][0] + axis.z * mtrx[2][0];
-    rslt.y = axis.x * mtrx[0][1] + axis.y * mtrx[1][1] + axis.z * mtrx[2][1];
-    rslt.z = axis.x * mtrx[0][2] + axis.y * mtrx[1][2] + axis.z * mtrx[2][2];
-    return rslt;
+
+  multipleMatrix(axisymmetric, metrix) {
+    let result = { x: 0, y: 0, z: 0 };
+    result.x = axisymmetric.x * metrix[0][0] + axisymmetric.y * metrix[1][0] + axisymmetric.z * metrix[2][0];
+    result.y = axisymmetric.x * metrix[0][1] + axisymmetric.y * metrix[1][1] + axisymmetric.z * metrix[2][1];
+    result.z = axisymmetric.x * metrix[0][2] + axisymmetric.y * metrix[1][2] + axisymmetric.z * metrix[2][2];
+    return result;
   }
-  scaleCenter(p, c, sX, sY) {
-    //################ change needed
-    if (p.z === 1) {
-      let mtrx = [
-        [sX, 0, 0],
-        [0, sY, 0],
-        [c.x * (1 - sX), c.y * (1 - sY), 1],
-      ];
-      return this.matrixMult(p, mtrx);
-    } else {
-      let t = { x: p.x * Math.min(sX, sY), y: p.y, z: p.z };
-      return t;
-    }
-  }
-  translatePoint(p, tX, tY) {
-    let mtrx = [
+
+  translatePoint(first, tX, tY) {
+    let metrix = [
       [1, 0, 0],
       [0, 1, 0],
       [tX, tY, 1],
     ];
-    return this.matrixMult(p, mtrx);
+    return this.multipleMatrix(first, metrix);
   }
 
   adjustObjectSize() {
@@ -451,16 +388,6 @@ class Draw extends Component {
     ) {
       XYmv = (canvasHeight / (Ymax - Ymin)) * 0.9;
     }
-    if (XYmv !== 1) {
-      points.map((point, index) => {
-        // points[index] = this.scaleCenter(point, cent, XYmv, XYmv);
-      });
-      this.findPointsProprtion();
-      points.map((point, index) => {
-        points[index] = this.translatePoint(point, -Xmin + 10, -Ymin + 10);
-      });
-      this.findPointsProprtion();
-    }
     if (Xmin < 0) Xmv = -Xmin;
     else if (Xmax > canvasWidth) Xmv = -Xmax;
 
@@ -474,9 +401,10 @@ class Draw extends Component {
     this.setState({ points: points });
     this.draw();
   }
+
   parsePoints(text) {
     let lines = text.split(/\r\n|\n/g);
-    let drawData = [];
+    let drawBoat = [];
     let points = [];
     lines.map((line) => {
       let pointsTmp = line.split(",");
@@ -486,19 +414,19 @@ class Draw extends Component {
         //Line
         point1 = { x: parseInt(pointsTmp[1]), y: parseInt(pointsTmp[2]), z: 1 };
         point2 = { x: parseInt(pointsTmp[3]), y: parseInt(pointsTmp[4]), z: 1 };
-        drawData.push([1, points.push(point1) - 1, points.push(point2) - 1]);
+        drawBoat.push([1, points.push(point1) - 1, points.push(point2) - 1]);
       } else if (pointsTmp[0] === "2") {
         //Circle
         point1 = { x: parseInt(pointsTmp[1]), y: parseInt(pointsTmp[2]), z: 1 };
-        radius = { x: parseInt(pointsTmp[3]), y: 0, z: 0 }; //check about rmoving t and z #############
-        drawData.push([2, points.push(point1) - 1, points.push(radius) - 1]);
+        radius = { x: parseInt(pointsTmp[3]), y: 0, z: 0 };
+        drawBoat.push([2, points.push(point1) - 1, points.push(radius) - 1]);
       } else if (pointsTmp[0] === "3") {
         //Curve
         point1 = { x: parseInt(pointsTmp[1]), y: parseInt(pointsTmp[2]), z: 1 };
         point2 = { x: parseInt(pointsTmp[3]), y: parseInt(pointsTmp[4]), z: 1 };
         point3 = { x: parseInt(pointsTmp[5]), y: parseInt(pointsTmp[6]), z: 1 };
         point4 = { x: parseInt(pointsTmp[7]), y: parseInt(pointsTmp[8]), z: 1 };
-        drawData.push([
+        drawBoat.push([
           3,
           points.push(point1) - 1,
           points.push(point2) - 1,
@@ -509,7 +437,7 @@ class Draw extends Component {
       }
     });
 
-    this.setState({ drawData: drawData, points: points });
+    this.setState({ drawBoat: drawBoat, points: points });
     this.findPointsProprtion();
     this.adjustObjectSize();
 
@@ -536,16 +464,37 @@ class Draw extends Component {
           <Button
             variant="contained"
             color="primary"
-            onClick={this.handleMoveOperation}
+            onClick={this.setOperationMoveState}
           >
             Move
           </Button>
           <Button
             variant="contained"
             color="primary"
-            onClick={this.handleRotateOperation}
+            onClick={this.setOperationRotateState}
           >
             Rotate
+          </Button>
+          <Button
+            variant="contained"
+            color="primary"
+            onClick={this.setOperationMirrorLeftRightState}
+          >
+            Mirror left/right
+          </Button>
+          <Button
+            variant="contained"
+            color="primary"
+            onClick={this.setOperationMirrorUpDownState}
+          >
+            Mirror up/dows
+          </Button>
+          <Button
+            variant="contained"
+            color="primary"
+            onClick={this.setOperationScallingState}
+          >
+            Scalling
           </Button>
           <Button
             variant="contained"
@@ -564,7 +513,6 @@ class Draw extends Component {
             borderColor: "black",
           }}
         >
-          {/* <canvas width={`${this.canvasWidth}`} height={`${this.canvasHeight}`}></canvas> */}
           <canvas
             id="canvas"
             width={canvasWidth}
